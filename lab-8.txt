@@ -1,0 +1,131 @@
+lab - 8:
+step 1 : create a deployment folder and give permission to jenkins to write
+$ sudo mkdir -p /opt/deployment
+$ sudo chown jenkins:jenkins /opt/deployment/
+
+step 2: create a maven project from lab-2
+$ mkdir lab8
+$ cd lab8
+
+$ mvn archetype:generate -DgroupId=com.example -DartifactId=MavenApp -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+
+$ cd MavenApp
+
+* EDIT pom.xml, App.java and AppTest.java according to lab-2
+
+* pom.xml content :
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<configuration>
+					<source>21</source>
+					<target>21</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.22.2</version>
+			</plugin>
+		</plugins>
+	</build>
+
+*App.java content:
+	package com.example;
+
+	public class App {
+
+	    public int add(int a, int b) {
+		return a + b;
+	    }
+
+	    public static void main(String[] args) {
+		App app = new App();
+
+		int result = app.add(2, 3);
+		System.out.println("2 + 3 = " + result);
+
+		System.out.println("Application executed successfully!");
+	    }
+	}
+	
+*AppTest.java content :
+	package com.example;
+
+	import org.junit.Assert;
+	import org.junit.Test;
+
+	public class AppTest {
+
+	    @Test
+	    public void testAdd() {
+		App app = new App();
+		int result = app.add(2, 3);
+
+		System.out.println("Running test: 2 + 3 = " + result);
+
+		Assert.assertEquals(5, result);
+	    }
+	}
+
+step 3: create a ansible-playbook
+$ ls        -->to make sure you are at the root by typing this command and see if it shows pom.xml and src
+
+$ mkdir ansible
+$ cd ansible
+
+$ nano hosts.ini
+ 
+content :
+[local]
+localhost ansible_connection=local
+
+$ nano deploy.yml
+  
+content:
+---
+- name: Deploy Maven Artifact
+  hosts: local
+  #become: true
+
+  tasks:
+    - name: Copy the artifact to the deployment directory
+      copy:
+        src: "{{ lookup('env','WORKSPACE') }}/target/MavenApp-1.0-SNAPSHOT.jar"
+        dest: "/opt/deployment/MavenApp.jar"
+        
+$ cd ../
+$ ls            -->check if this outputs src pom.xml ansible
+
+step 4:Push to github
+	copy paste all the commands shown on github
+	
+step 5:Creating a CI pipeline in jenkins
+* open jenkins
+*click new item
+*name - MavenApp-CI
+*select freestyle project and click ok
+* In Source Code Management choose git
+* copy and paste the github repo url
+* change branch master to main
+* go to add build step click it and choose Invoke top-level Maven targets 
+* In goal type 'clean package'
+* click on add build step again and this time choose execute shell
+* in command type 'ansible-playbook -i ansible/hosts.ini ansible/deploy.yml'
+* next go to Post build action and choose Archive the artifacts 
+* in files to archive type 'target/*.jar'
+* click apply and save
+* click build now
+
+step - 6:
+* to see the output
+$ ls -l /opt/deployment/
+  this should show the.jar file like this --> jenkins jenkins 2495 Jun  9 16:46 MavenApp.jar
+
+
+
